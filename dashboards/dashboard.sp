@@ -1,6 +1,6 @@
 dashboard "report" {
 
-  title         = "AWS Review Accounts"
+  title         = "1 - Ops Team AWS Review Accounts"
 
   tags = merge(local.aws_common_tags, {
     type     = "Report"
