@@ -177,7 +177,7 @@ control "rds_mysql_version" {
             ELSE 'ok'
         END AS status,
         CASE
-            WHEN SPLIT_PART(engine_version, '.', 1)::INTEGER < 8 THEN title || 'running in mysql version < 8'
+            WHEN SPLIT_PART(engine_version, '.', 1)::INTEGER < 8 THEN title || ' running in mysql version < 8'
             ELSE title || ' running in mysql version >= 8'
         END AS reason
     FROM

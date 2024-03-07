@@ -2137,7 +2137,7 @@ control "opensearch_domain_fine_grained_access_enabled" {
 #
 
 control "rds_db_snapshot_prohibit_public_access" {
-  title = "3.46 OpenSearch domains should have fine-grained access control enabled"
+  title = "3.46 RDS snapshots should be private"
   severity = "critical"
   sql = <<EOT
     (
