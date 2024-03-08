@@ -1,6 +1,6 @@
 dashboard "report" {
 
-  title         = "1 - Ops Team AWS Review Accounts"
+  title         = "0. Ops Team AWS Review Accounts"
 
   tags = merge(local.aws_common_tags, {
     type     = "Report"
@@ -85,7 +85,10 @@ benchmark "cost" {
     control.vpc_eip_associated,
     control.ebs_volume_unused,
     control.ec2_stopped_instance_30_days,
-    control.rds_mysql_version
+    control.rds_mysql_version,
+    control.gp2_volumes,
+    control.ec2_instance_with_graviton,
+    control.rds_db_instance_with_graviton
   ] 
 }
 

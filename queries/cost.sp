@@ -118,7 +118,7 @@ query "ebs_volume_unused" {
   title = "2.3 EBS volumes should be attached to EC2 instances"
   sql = <<EOT
     select
-        arn as resource,
+        volume_id as resource,
         'alarm' as status,
         title || ' not attached to EC2 instance.' as reason,
         region,
@@ -158,22 +158,99 @@ query "rds_mysql_version" {
   title = "2.5 RDS running in MySQL version < 8. Additional support cost"
   sql = <<EOT
     SELECT
-        db_instance_identifier as resource,
-        engine_version,
-        region AS region,
-        account_id AS account_id,
+        db_instance_identifier AS resource,
         CASE
-            WHEN SPLIT_PART(engine_version, '.', 1)::INTEGER < 8 THEN 'alarm'
+            WHEN CAST(SPLIT_PART(engine_version, '.', 1) AS INTEGER) < 8 THEN 'alarm'
             ELSE 'ok'
         END AS status,
         CASE
-            WHEN SPLIT_PART(engine_version, '.', 1)::INTEGER < 8 THEN title || ' running in mysql version < 8'
-            ELSE title || ' running in mysql version >= 8'
-        END AS reason
+            WHEN CAST(SPLIT_PART(engine_version, '.', 1) AS INTEGER) < 8 THEN 'MySQL version < 8'
+            ELSE 'MySQL version >= 8'
+        END AS reason,
+        engine_version,
+        region,
+        account_id     
     FROM
         aws_rds_db_instance
     WHERE
         engine = 'mysql';
+
     EOT
 }
 
+query "gp2_volumes" {
+  title = "2.6 Still using gp2 EBS volumes? Should use gp3 instead"
+  sql = <<EOT
+    SELECT
+        volume_id AS resource,
+        CASE
+            WHEN volume_type = 'gp2' THEN 'alarm'
+            WHEN volume_type = 'gp3' THEN 'ok'
+            ELSE 'skip'
+        END AS status,
+        volume_id || ' type is ' || volume_type || '.' AS reason,
+        region,
+        account_id
+    FROM
+        aws_ebs_volume
+    WHERE
+        volume_type = 'gp2';
+
+    EOT
+}
+
+query "ec2_instance_with_graviton" {
+  title = "2.7 EC2 instances without graviton processor should be reviewed"
+  sql = <<EOT
+    SELECT
+        instance_id AS resource,
+        CASE
+            WHEN platform = 'windows' THEN 'skip'
+            WHEN architecture = 'arm64' THEN 'ok'
+            ELSE 'alarm'
+        END AS status,
+        CASE
+            WHEN platform = 'windows' THEN title || ' is a Windows type machine.'
+            WHEN architecture = 'arm64' THEN title || ' is using a Graviton processor.'
+            ELSE title || ' is not using a Graviton processor.'
+        END AS reason,
+        region,
+        account_id
+    FROM
+        aws_ec2_instance
+    WHERE
+        CASE
+            WHEN platform = 'windows' THEN 'skip'
+            WHEN architecture = 'arm64' THEN 'ok'
+            ELSE 'alarm'
+        END = 'alarm';
+
+    EOT
+}
+
+
+query "rds_db_instance_with_graviton" {
+  title = "2.8 RDS DB instances without graviton processor should be reviewed"
+  sql = <<EOT
+    SELECT
+        db_instance_identifier AS resource,
+        CASE
+            WHEN class LIKE 'db.%g%.%' THEN 'ok'
+            ELSE 'alarm'
+        END AS status,
+        CASE
+            WHEN class LIKE 'db.%g%.%' THEN title || ' is using a Graviton processor.'
+            ELSE title || ' is not using a Graviton processor.'
+        END AS reason,
+        region,
+        account_id
+    FROM
+        aws_rds_db_instance
+    WHERE
+        CASE
+            WHEN class LIKE 'db.%g%.%' THEN 'ok'
+            ELSE 'alarm'
+        END = 'alarm';
+
+    EOT
+}

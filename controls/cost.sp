@@ -187,3 +187,64 @@ control "rds_mysql_version" {
     EOT
 }
 
+control "gp2_volumes" {
+  title = "2.6 Still using gp2 EBS volumes? Should use gp3 instead"
+  sql = <<EOT
+    select
+    arn as resource,
+    case
+        when volume_type = 'gp2' then 'alarm'
+        when volume_type = 'gp3' then 'ok'
+        else 'skip'
+    end as status,
+    volume_id || ' type is ' || volume_type || '.' as reason,
+    region,
+    account_id
+    from
+    aws_ebs_volume;
+    EOT
+}
+
+control "ec2_instance_with_graviton" {
+  title = "2.7 EC2 instances without graviton processor should be reviewed"
+  sql = <<EOT
+    select
+    arn as resource,
+    case
+        when platform = 'windows' then 'skip'
+        when architecture = 'arm64' then 'ok'
+        else 'alarm'
+    end as status,
+    case
+        when platform = 'windows' then title || ' is windows type machine.'
+        when architecture = 'arm64' then title || ' is using Graviton processor.'
+        else title || ' is not using Graviton processor.'
+    end as reason,
+    region,
+    account_id
+    from
+    aws_ec2_instance;
+    EOT
+}
+
+
+control "rds_db_instance_with_graviton" {
+  title = "2.8 RDS DB instances without graviton processor should be reviewed"
+  sql = <<EOT
+    select
+    arn as resource,
+    case
+        when class like 'db.%g%.%' then 'ok'
+        else 'alarm'
+    end as status,
+    case
+        when class like 'db.%g%.%' then title || ' is using Graviton processor.'
+        else title || ' is not using Graviton processor.'
+    end as reason,
+    region,
+    account_id
+    from
+    aws_rds_db_instance;
+    EOT
+}
+

@@ -83,5 +83,33 @@ dashboard "cost" {
       query = query.rds_mysql_version
     } 
 
+    table {
+      title = "2.6 Still using gp2 EBS volumes? Should use gp3 instead"
+      column "ARN" {
+        display = "none"
+      }
+
+      query = query.gp2_volumes
+    }     
+
+    table {
+      title = "2.7 EC2 instances without graviton processor should be reviewed"
+      column "ARN" {
+        display = "none"
+      }
+
+      query = query.ec2_instance_with_graviton
+    }     
+
+    table {
+      title = "2.8 RDS DB instances without graviton processor should be reviewed"
+      column "ARN" {
+        display = "none"
+      }
+
+      query = query.rds_db_instance_with_graviton
+    }         
+
+
   }
 }    
