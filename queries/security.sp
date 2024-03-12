@@ -1885,8 +1885,8 @@ query "cloudfront_distribution_no_non_existent_s3_origin" {
         )
         ) as bucket_name_list
     from
-        aws_cloudfront_distribution as d,
-        jsonb_array_elements(d.origins) as o
+        aws_cloudfront_distribution as d
+        left join jsonb_array_elements(d.origins) as o on true
         left join aws_s3_bucket as b on b.name = split_part(o ->> 'Id', '.s3', 1)
     where
         b.name is null
@@ -1895,40 +1895,42 @@ query "cloudfront_distribution_no_non_existent_s3_origin" {
         d.arn
     )
     select
-    distinct b.arn as resource,
+    distinct d.arn as resource,
     case
         when b.arn is null then 'ok'
         else 'alarm'
     end as status,
     case
-        when b.arn is null then title || ' does not point to any non-existent S3 origins.'
-        when jsonb_array_length(b.bucket_name_list) > 0 then title || case
-        when jsonb_array_length(b.bucket_name_list) > 2 then concat(
-            ' point to non-existent S3 origins ',
-            b.bucket_name_list #> > '{0}',
+        when b.arn is null then 'Does not point to any non-existent S3 origins.'
+        when jsonb_array_length(b.bucket_name_list) > 0 then
+        case
+            when jsonb_array_length(b.bucket_name_list) > 2 then concat(
+            'Points to non-existent S3 origins: ',
+            (b.bucket_name_list -> 0),
             ', ',
-            b.bucket_name_list #> > '{1}',
+            (b.bucket_name_list -> 1),
             ' and ' || (jsonb_array_length(b.bucket_name_list) - 2) :: text || ' more.'
-        )
-        when jsonb_array_length(b.bucket_name_list) = 2 then concat(
-            ' point to non-existent S3 origins ',
-            b.bucket_name_list #> > '{0}',
+            )
+            when jsonb_array_length(b.bucket_name_list) = 2 then concat(
+            'Points to non-existent S3 origins: ',
+            (b.bucket_name_list -> 0),
             ' and ',
-            b.bucket_name_list #> > '{1}',
+            (b.bucket_name_list -> 1),
             '.'
-        )
-        else concat(
-            ' point to non-existent S3 origin ',
-            b.bucket_name_list #> > '{0}',
+            )
+            else concat(
+            'Points to non-existent S3 origin: ',
+            (b.bucket_name_list -> 0),
             '.'
-        )
+            )
         end
     end as reason,
-    region,
-    account_id
+    d.region,
+    d.account_id
     from
     aws_cloudfront_distribution as d
     left join distribution_with_non_existent_bucket as b on b.arn = d.arn;
+
     EOT
 } 
 
